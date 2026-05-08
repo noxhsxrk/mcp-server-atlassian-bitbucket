@@ -134,7 +134,10 @@ function buildGetDescription(workspace: string): string {
 - If unsure about available fields, fetch ONE item first with \`pagelen: "1"\` and no jq, then add jq in follow-up calls
 
 **Configured workspace: \`${workspace}\`**
-Use this exact value for {workspace} in all paths below. Do NOT call /workspaces or /user/permissions/workspaces (removed April 2026).
+- Bitbucket workspace URL: \`https://bitbucket.org/${workspace}/workspace/overview/\`
+- Bitbucket repo URL:      \`https://bitbucket.org/${workspace}/{repo}/\`
+- Bitbucket PR URL:        \`https://bitbucket.org/${workspace}/{repo}/pull-requests/{id}\`
+Use \`${workspace}\` for all {workspace} placeholders below. Do NOT call /workspaces or /user/permissions/workspaces (removed April 2026).
 
 **Current authenticated user:**
 - \`/user\` — get current user (username, display_name, account_id, uuid)
