@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Logger } from '../utils/logger.util.js';
 import { formatErrorForMcpTool } from '../utils/error.util.js';
 import { truncateForAI } from '../utils/formatter.util.js';
+import { config } from '../utils/config.util.js';
 import {
 	GetApiToolArgs,
 	type GetApiToolArgsType,
@@ -124,39 +125,51 @@ const patch = createWriteHandler('PATCH', handlePatch);
 const del = createReadHandler('DELETE', handleDelete);
 
 // Tool descriptions
-const BB_GET_DESCRIPTION = `Read any Bitbucket data. Returns TOON format by default (30-60% fewer tokens than JSON).
+function buildGetDescription(workspace: string): string {
+	return `Read any Bitbucket data. Returns TOON format by default (30-60% fewer tokens than JSON).
 
 **IMPORTANT - Cost Optimization:**
 - ALWAYS use \`jq\` param to filter response fields. Unfiltered responses are very expensive!
 - Use \`pagelen\` query param to restrict result count (e.g., \`pagelen: "5"\`)
-- If unsure about available fields, first fetch ONE item with \`pagelen: "1"\` and NO jq filter to explore the schema, then use jq in subsequent calls
+- If unsure about available fields, fetch ONE item first with \`pagelen: "1"\` and no jq, then add jq in follow-up calls
 
-**Schema Discovery Pattern:**
-1. First call: \`path: "/workspaces", queryParams: {"pagelen": "1"}\` (no jq) - explore available fields
-2. Then use: \`jq: "values[*].{slug: slug, name: name, uuid: uuid}"\` - extract only what you need
+**Configured workspace: \`${workspace}\`**
+Use this exact value for {workspace} in all paths below. Do NOT call /workspaces or /user/permissions/workspaces (removed April 2026).
 
-**Output format:** TOON (default, token-efficient) or JSON (\`outputFormat: "json"\`)
+**Current authenticated user:**
+- \`/user\` — get current user (username, display_name, account_id, uuid)
 
-**Common paths:**
-- \`/workspaces\` - list workspaces
-- \`/repositories/{workspace}\` - list repos in workspace
-- \`/repositories/{workspace}/{repo}\` - get repo details
-- \`/repositories/{workspace}/{repo}/pullrequests\` - list PRs
-- \`/repositories/{workspace}/{repo}/pullrequests/{id}\` - get PR details
-- \`/repositories/{workspace}/{repo}/pullrequests/{id}/comments\` - list PR comments
-- \`/repositories/{workspace}/{repo}/pullrequests/{id}/diff\` - get PR diff
-- \`/repositories/{workspace}/{repo}/refs/branches\` - list branches
-- \`/repositories/{workspace}/{repo}/commits\` - list commits
-- \`/repositories/{workspace}/{repo}/src/{commit}/{filepath}\` - get file content
-- \`/repositories/{workspace}/{repo}/diff/{source}..{destination}\` - compare branches/commits
+**Repositories:**
+- \`/repositories/${workspace}\` — list repos in workspace
+- \`/repositories/${workspace}/{repo}\` — get repo details
+- \`/repositories/${workspace}/{repo}/refs/branches\` — list branches
+- \`/repositories/${workspace}/{repo}/commits\` — list commits
+- \`/repositories/${workspace}/{repo}/src/{commit}/{filepath}\` — get file content
+- \`/repositories/${workspace}/{repo}/diff/{source}..{destination}\` — compare branches
 
-**Query params:** \`pagelen\` (page size), \`page\` (page number), \`q\` (filter), \`sort\` (order), \`fields\` (sparse response)
+**Pull Requests:**
+- \`/repositories/${workspace}/{repo}/pullrequests\` — list PRs (default: OPEN)
+- \`/repositories/${workspace}/{repo}/pullrequests/{id}\` — get PR details
+- \`/repositories/${workspace}/{repo}/pullrequests/{id}/diff\` — get PR diff
+- \`/repositories/${workspace}/{repo}/pullrequests/{id}/comments\` — list PR comments
 
-**Example filters (q param):** \`state="OPEN"\`, \`source.branch.name="feature"\`, \`title~"bug"\`
+**PRs requiring your review (step-by-step):**
+1. Get your uuid: \`path: "/user", jq: "uuid"\`
+2. List repos: \`path: "/repositories/${workspace}", queryParams: {"pagelen": "50", "role": "member"}, jq: "values[*].slug"\`
+3. For each repo, filter by reviewer role: \`path: "/repositories/${workspace}/{repo}/pullrequests", queryParams: {"q": "state=\\"OPEN\\"", "role": "REVIEWER", "pagelen": "10"}\`
 
-**JQ examples:** \`values[*].slug\`, \`values[0]\`, \`values[*].{name: name, uuid: uuid}\`
+**Query params:** \`pagelen\` (page size), \`page\` (page number), \`q\` (filter expression), \`sort\`, \`role\` (AUTHOR/REVIEWER/PARTICIPANT)
+
+**Filter examples (q param):**
+- \`state="OPEN"\`
+- \`source.branch.name="feature/my-branch"\`
+- \`title~"bug"\`
+- \`reviewers.uuid="{your-uuid}"\`
+
+**JQ examples:** \`values[*].slug\`, \`values[0]\`, \`values[*].{id: id, title: title, state: state}\`
 
 The \`/2.0\` prefix is added automatically. API reference: https://developer.atlassian.com/cloud/bitbucket/rest/`;
+}
 
 const BB_POST_DESCRIPTION = `Create Bitbucket resources. Returns TOON format by default (token-efficient).
 
@@ -255,11 +268,16 @@ function registerTools(server: McpServer) {
 	);
 	registerLogger.debug('Registering API tools...');
 
+	// Load config so env vars from .env / global config are available
+	config.load();
+	const workspace =
+		config.get('BITBUCKET_DEFAULT_WORKSPACE') || '{workspace}';
+
 	server.registerTool(
 		'bb_get',
 		{
 			title: 'Bitbucket GET Request',
-			description: BB_GET_DESCRIPTION,
+			description: buildGetDescription(workspace),
 			inputSchema: GetApiToolArgs,
 			annotations: {
 				readOnlyHint: true,
