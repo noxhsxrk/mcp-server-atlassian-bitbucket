@@ -8,7 +8,7 @@ export const CloneRepositoryToolArgs = z.object({
 		.string()
 		.optional()
 		.describe(
-			'Bitbucket workspace slug containing the repository. If not provided, uses BITBUCKET_DEFAULT_WORKSPACE env var. The workspace slug is the segment after bitbucket.org/ in your workspace URL, e.g. "ascendcorp" from https://bitbucket.org/ascendcorp/workspace/overview/. Example: "myteam"',
+			'Bitbucket workspace slug containing the repository. If not provided, uses BITBUCKET_DEFAULT_WORKSPACE env var. The workspace slug is the segment after bitbucket.org/ in your workspace URL, e.g. "nox" from https://bitbucket.org/nox/workspace/overview/. Example: "myteam"',
 		),
 	repoSlug: z
 		.string()
