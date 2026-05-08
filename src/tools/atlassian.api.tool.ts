@@ -174,91 +174,98 @@ Use \`${workspace}\` for all {workspace} placeholders below. Do NOT call /worksp
 The \`/2.0\` prefix is added automatically. API reference: https://developer.atlassian.com/cloud/bitbucket/rest/`;
 }
 
-const BB_POST_DESCRIPTION = `Create Bitbucket resources. Returns TOON format by default (token-efficient).
+function buildPostDescription(workspace: string): string {
+	return `Create Bitbucket resources. Returns TOON format by default (token-efficient).
 
 **IMPORTANT - Cost Optimization:**
 - Use \`jq\` param to extract only needed fields from response (e.g., \`jq: "{id: id, title: title}"\`)
 - Unfiltered responses include all metadata and are expensive!
 
-**Output format:** TOON (default) or JSON (\`outputFormat: "json"\`)
+**Workspace: \`${workspace}\`**
 
 **Common operations:**
 
-1. **Create PR:** \`/repositories/{workspace}/{repo}/pullrequests\`
+1. **Create PR:** \`/repositories/${workspace}/{repo}/pullrequests\`
    body: \`{"title": "...", "source": {"branch": {"name": "feature"}}, "destination": {"branch": {"name": "main"}}}\`
 
-2. **Add PR comment:** \`/repositories/{workspace}/{repo}/pullrequests/{id}/comments\`
+2. **Add PR comment:** \`/repositories/${workspace}/{repo}/pullrequests/{id}/comments\`
    body: \`{"content": {"raw": "Comment text"}}\`
 
-3. **Approve PR:** \`/repositories/{workspace}/{repo}/pullrequests/{id}/approve\`
+3. **Approve PR:** \`/repositories/${workspace}/{repo}/pullrequests/{id}/approve\`
    body: \`{}\`
 
-4. **Request changes:** \`/repositories/{workspace}/{repo}/pullrequests/{id}/request-changes\`
+4. **Request changes:** \`/repositories/${workspace}/{repo}/pullrequests/{id}/request-changes\`
    body: \`{}\`
 
-5. **Merge PR:** \`/repositories/{workspace}/{repo}/pullrequests/{id}/merge\`
+5. **Merge PR:** \`/repositories/${workspace}/{repo}/pullrequests/{id}/merge\`
    body: \`{"merge_strategy": "squash"}\` (strategies: merge_commit, squash, fast_forward)
 
 The \`/2.0\` prefix is added automatically. API reference: https://developer.atlassian.com/cloud/bitbucket/rest/`;
+}
 
-const BB_PUT_DESCRIPTION = `Replace Bitbucket resources (full update). Returns TOON format by default.
+function buildPutDescription(workspace: string): string {
+	return `Replace Bitbucket resources (full update). Returns TOON format by default.
 
 **IMPORTANT - Cost Optimization:**
 - Use \`jq\` param to extract only needed fields from response
-- Example: \`jq: "{uuid: uuid, name: name}"\`
 
-**Output format:** TOON (default) or JSON (\`outputFormat: "json"\`)
+**Workspace: \`${workspace}\`**
 
 **Common operations:**
 
-1. **Update repository:** \`/repositories/{workspace}/{repo}\`
+1. **Update repository:** \`/repositories/${workspace}/{repo}\`
    body: \`{"description": "...", "is_private": true, "has_issues": true}\`
 
-2. **Create/update file:** \`/repositories/{workspace}/{repo}/src\`
+2. **Create/update file:** \`/repositories/${workspace}/{repo}/src\`
    Note: Use multipart form data for file uploads (complex - prefer PATCH for metadata)
 
-3. **Update branch restriction:** \`/repositories/{workspace}/{repo}/branch-restrictions/{id}\`
+3. **Update branch restriction:** \`/repositories/${workspace}/{repo}/branch-restrictions/{id}\`
    body: \`{"kind": "push", "pattern": "main", "users": [{"uuid": "..."}]}\`
 
 The \`/2.0\` prefix is added automatically. API reference: https://developer.atlassian.com/cloud/bitbucket/rest/`;
+}
 
-const BB_PATCH_DESCRIPTION = `Partially update Bitbucket resources. Returns TOON format by default.
+function buildPatchDescription(workspace: string): string {
+	return `Partially update Bitbucket resources. Returns TOON format by default.
 
 **IMPORTANT - Cost Optimization:** Use \`jq\` param to filter response fields.
 
-**Output format:** TOON (default) or JSON (\`outputFormat: "json"\`)
+**Workspace: \`${workspace}\`**
 
 **Common operations:**
 
-1. **Update PR title/description:** \`/repositories/{workspace}/{repo}/pullrequests/{id}\`
+1. **Update PR title/description:** \`/repositories/${workspace}/{repo}/pullrequests/{id}\`
    body: \`{"title": "New title", "description": "Updated description"}\`
 
-2. **Update PR reviewers:** \`/repositories/{workspace}/{repo}/pullrequests/{id}\`
+2. **Update PR reviewers:** \`/repositories/${workspace}/{repo}/pullrequests/{id}\`
    body: \`{"reviewers": [{"uuid": "{user-uuid}"}]}\`
 
-3. **Update repository properties:** \`/repositories/{workspace}/{repo}\`
+3. **Update repository properties:** \`/repositories/${workspace}/{repo}\`
    body: \`{"description": "New description"}\`
 
-4. **Update comment:** \`/repositories/{workspace}/{repo}/pullrequests/{pr_id}/comments/{comment_id}\`
+4. **Update comment:** \`/repositories/${workspace}/{repo}/pullrequests/{pr_id}/comments/{comment_id}\`
    body: \`{"content": {"raw": "Updated comment"}}\`
 
 The \`/2.0\` prefix is added automatically. API reference: https://developer.atlassian.com/cloud/bitbucket/rest/`;
+}
 
-const BB_DELETE_DESCRIPTION = `Delete Bitbucket resources. Returns TOON format by default.
+function buildDeleteDescription(workspace: string): string {
+	return `Delete Bitbucket resources. Returns TOON format by default.
 
-**Output format:** TOON (default) or JSON (\`outputFormat: "json"\`)
+**Workspace: \`${workspace}\`**
 
 **Common operations:**
 
-1. **Delete branch:** \`/repositories/{workspace}/{repo}/refs/branches/{branch_name}\`
-2. **Delete PR comment:** \`/repositories/{workspace}/{repo}/pullrequests/{pr_id}/comments/{comment_id}\`
-3. **Decline PR:** \`/repositories/{workspace}/{repo}/pullrequests/{id}/decline\`
-4. **Remove PR approval:** \`/repositories/{workspace}/{repo}/pullrequests/{id}/approve\`
-5. **Delete repository:** \`/repositories/{workspace}/{repo}\` (caution: irreversible)
+1. **Delete branch:** \`/repositories/${workspace}/{repo}/refs/branches/{branch_name}\`
+2. **Delete PR comment:** \`/repositories/${workspace}/{repo}/pullrequests/{pr_id}/comments/{comment_id}\`
+3. **Decline PR:** \`/repositories/${workspace}/{repo}/pullrequests/{id}/decline\`
+4. **Remove PR approval:** \`/repositories/${workspace}/{repo}/pullrequests/{id}/approve\`
+5. **Delete repository:** \`/repositories/${workspace}/{repo}\` (caution: irreversible)
 
 Note: Most DELETE endpoints return 204 No Content on success.
 
 The \`/2.0\` prefix is added automatically. API reference: https://developer.atlassian.com/cloud/bitbucket/rest/`;
+}
 
 /**
  * Register generic Bitbucket API tools with the MCP server.
@@ -296,7 +303,7 @@ function registerTools(server: McpServer) {
 		'bb_post',
 		{
 			title: 'Bitbucket POST Request',
-			description: BB_POST_DESCRIPTION,
+			description: buildPostDescription(workspace),
 			inputSchema: RequestWithBodyArgs,
 			annotations: {
 				readOnlyHint: false,
@@ -312,7 +319,7 @@ function registerTools(server: McpServer) {
 		'bb_put',
 		{
 			title: 'Bitbucket PUT Request',
-			description: BB_PUT_DESCRIPTION,
+			description: buildPutDescription(workspace),
 			inputSchema: RequestWithBodyArgs,
 			annotations: {
 				readOnlyHint: false,
@@ -328,7 +335,7 @@ function registerTools(server: McpServer) {
 		'bb_patch',
 		{
 			title: 'Bitbucket PATCH Request',
-			description: BB_PATCH_DESCRIPTION,
+			description: buildPatchDescription(workspace),
 			inputSchema: RequestWithBodyArgs,
 			annotations: {
 				readOnlyHint: false,
@@ -344,7 +351,7 @@ function registerTools(server: McpServer) {
 		'bb_delete',
 		{
 			title: 'Bitbucket DELETE Request',
-			description: BB_DELETE_DESCRIPTION,
+			description: buildDeleteDescription(workspace),
 			inputSchema: DeleteApiToolArgs,
 			annotations: {
 				readOnlyHint: false,

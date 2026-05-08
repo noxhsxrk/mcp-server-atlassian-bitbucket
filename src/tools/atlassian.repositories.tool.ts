@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Logger } from '../utils/logger.util.js';
 import { formatErrorForMcpTool } from '../utils/error.util.js';
 import { truncateForAI } from '../utils/formatter.util.js';
+import { config } from '../utils/config.util.js';
 import {
 	CloneRepositoryToolArgs,
 	type CloneRepositoryToolArgsType,
@@ -49,9 +50,14 @@ async function handleRepoClone(args: Record<string, unknown>) {
 }
 
 // Tool description
-const BB_CLONE_DESCRIPTION = `Clone a Bitbucket repository to your local filesystem using SSH (preferred) or HTTPS.
+function buildCloneDescription(workspace: string): string {
+	return `Clone a Bitbucket repository to your local filesystem using SSH (preferred) or HTTPS.
 
-Provide \`repoSlug\` and \`targetPath\` (absolute path). Clones into \`targetPath/repoSlug\`. SSH keys must be configured; falls back to HTTPS if unavailable.`;
+**Workspace: \`${workspace}\`** (from BITBUCKET_DEFAULT_WORKSPACE)
+- Repo URL pattern: \`https://bitbucket.org/${workspace}/{repo}/\`
+
+Provide \`repoSlug\` (the {repo} part of the URL) and \`targetPath\` (absolute path). Clones into \`targetPath/repoSlug\`. SSH keys must be configured; falls back to HTTPS if unavailable.`;
+}
 
 /**
  * Register all Bitbucket repository tools with the MCP server.
@@ -66,11 +72,15 @@ function registerTools(server: McpServer) {
 	);
 	registerLogger.debug('Registering Repository tools...');
 
+	config.load();
+	const workspace =
+		config.get('BITBUCKET_DEFAULT_WORKSPACE') || '{workspace}';
+
 	server.registerTool(
 		'bb_clone',
 		{
 			title: 'Clone Bitbucket Repository',
-			description: BB_CLONE_DESCRIPTION,
+			description: buildCloneDescription(workspace),
 			inputSchema: CloneRepositoryToolArgs,
 			annotations: {
 				readOnlyHint: false,
