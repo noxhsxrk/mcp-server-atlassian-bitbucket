@@ -125,7 +125,13 @@ const patch = createWriteHandler('PATCH', handlePatch);
 const del = createReadHandler('DELETE', handleDelete);
 
 // Tool descriptions
-function buildGetDescription(workspace: string): string {
+function buildGetDescription(workspace: string, project?: string): string {
+	const projectNote = project
+		? `\n**Configured project: \`${project}\`** — always add \`queryParams: {"q": "project.key=\\"${project}\\""}\` when listing repos.`
+		: '';
+	const repoListExample = project
+		? `\`/repositories/${workspace}\` with \`queryParams: {"q": "project.key=\\"${project}\\"", "pagelen": "50"}\``
+		: `\`/repositories/${workspace}\``;
 	return `Read any Bitbucket data. Returns TOON format by default (30-60% fewer tokens than JSON).
 
 **IMPORTANT - Cost Optimization:**
@@ -133,7 +139,7 @@ function buildGetDescription(workspace: string): string {
 - Use \`pagelen\` query param to restrict result count (e.g., \`pagelen: "5"\`)
 - If unsure about available fields, fetch ONE item first with \`pagelen: "1"\` and no jq, then add jq in follow-up calls
 
-**Configured workspace: \`${workspace}\`**
+**Configured workspace: \`${workspace}\`**${projectNote}
 - Bitbucket workspace URL: \`https://bitbucket.org/${workspace}/workspace/overview/\`
 - Bitbucket repo URL:      \`https://bitbucket.org/${workspace}/{repo}/\`
 - Bitbucket PR URL:        \`https://bitbucket.org/${workspace}/{repo}/pull-requests/{id}\`
@@ -143,7 +149,7 @@ Use \`${workspace}\` for all {workspace} placeholders below. Do NOT call /worksp
 - \`/user\` — get current user (username, display_name, account_id, uuid)
 
 **Repositories:**
-- \`/repositories/${workspace}\` — list repos in workspace
+- ${repoListExample} — list repos in workspace
 - \`/repositories/${workspace}/{repo}\` — get repo details
 - \`/repositories/${workspace}/{repo}/refs/branches\` — list branches
 - \`/repositories/${workspace}/{repo}/commits\` — list commits
@@ -158,7 +164,7 @@ Use \`${workspace}\` for all {workspace} placeholders below. Do NOT call /worksp
 
 **PRs requiring your review (step-by-step):**
 1. Get your uuid: \`path: "/user", jq: "uuid"\`
-2. List repos: \`path: "/repositories/${workspace}", queryParams: {"pagelen": "50", "role": "member"}, jq: "values[*].slug"\`
+2. List repos: \`path: "/repositories/${workspace}", queryParams: {${project ? `"q": "project.key=\\"${project}\\"", ` : ''}"pagelen": "50", "role": "member"}, jq: "values[*].slug"\`
 3. For each repo, filter by reviewer role: \`path: "/repositories/${workspace}/{repo}/pullrequests", queryParams: {"q": "state=\\"OPEN\\"", "role": "REVIEWER", "pagelen": "10"}\`
 
 **Query params:** \`pagelen\` (page size), \`page\` (page number), \`q\` (filter expression), \`sort\`, \`role\` (AUTHOR/REVIEWER/PARTICIPANT)
@@ -174,14 +180,17 @@ Use \`${workspace}\` for all {workspace} placeholders below. Do NOT call /worksp
 The \`/2.0\` prefix is added automatically. API reference: https://developer.atlassian.com/cloud/bitbucket/rest/`;
 }
 
-function buildPostDescription(workspace: string): string {
+function buildPostDescription(workspace: string, project?: string): string {
+	const projectNote = project
+		? `\n**Configured project: \`${project}\`** — repos belong to this project.`
+		: '';
 	return `Create Bitbucket resources. Returns TOON format by default (token-efficient).
 
 **IMPORTANT - Cost Optimization:**
 - Use \`jq\` param to extract only needed fields from response (e.g., \`jq: "{id: id, title: title}"\`)
 - Unfiltered responses include all metadata and are expensive!
 
-**Workspace: \`${workspace}\`**
+**Workspace: \`${workspace}\`**${projectNote}
 
 **Common operations:**
 
@@ -203,13 +212,16 @@ function buildPostDescription(workspace: string): string {
 The \`/2.0\` prefix is added automatically. API reference: https://developer.atlassian.com/cloud/bitbucket/rest/`;
 }
 
-function buildPutDescription(workspace: string): string {
+function buildPutDescription(workspace: string, project?: string): string {
+	const projectNote = project
+		? `\n**Configured project: \`${project}\`** — repos belong to this project.`
+		: '';
 	return `Replace Bitbucket resources (full update). Returns TOON format by default.
 
 **IMPORTANT - Cost Optimization:**
 - Use \`jq\` param to extract only needed fields from response
 
-**Workspace: \`${workspace}\`**
+**Workspace: \`${workspace}\`**${projectNote}
 
 **Common operations:**
 
@@ -225,12 +237,15 @@ function buildPutDescription(workspace: string): string {
 The \`/2.0\` prefix is added automatically. API reference: https://developer.atlassian.com/cloud/bitbucket/rest/`;
 }
 
-function buildPatchDescription(workspace: string): string {
+function buildPatchDescription(workspace: string, project?: string): string {
+	const projectNote = project
+		? `\n**Configured project: \`${project}\`** — repos belong to this project.`
+		: '';
 	return `Partially update Bitbucket resources. Returns TOON format by default.
 
 **IMPORTANT - Cost Optimization:** Use \`jq\` param to filter response fields.
 
-**Workspace: \`${workspace}\`**
+**Workspace: \`${workspace}\`**${projectNote}
 
 **Common operations:**
 
@@ -249,10 +264,13 @@ function buildPatchDescription(workspace: string): string {
 The \`/2.0\` prefix is added automatically. API reference: https://developer.atlassian.com/cloud/bitbucket/rest/`;
 }
 
-function buildDeleteDescription(workspace: string): string {
+function buildDeleteDescription(workspace: string, project?: string): string {
+	const projectNote = project
+		? `\n**Configured project: \`${project}\`** — repos belong to this project.`
+		: '';
 	return `Delete Bitbucket resources. Returns TOON format by default.
 
-**Workspace: \`${workspace}\`**
+**Workspace: \`${workspace}\`**${projectNote}
 
 **Common operations:**
 
@@ -282,12 +300,13 @@ function registerTools(server: McpServer) {
 	config.load();
 	const workspace =
 		config.get('BITBUCKET_DEFAULT_WORKSPACE') || '{workspace}';
+	const project = config.get('BITBUCKET_DEFAULT_PROJECT');
 
 	server.registerTool(
 		'bb_get',
 		{
 			title: 'Bitbucket GET Request',
-			description: buildGetDescription(workspace),
+			description: buildGetDescription(workspace, project),
 			inputSchema: GetApiToolArgs,
 			annotations: {
 				readOnlyHint: true,
@@ -303,7 +322,7 @@ function registerTools(server: McpServer) {
 		'bb_post',
 		{
 			title: 'Bitbucket POST Request',
-			description: buildPostDescription(workspace),
+			description: buildPostDescription(workspace, project),
 			inputSchema: RequestWithBodyArgs,
 			annotations: {
 				readOnlyHint: false,
@@ -319,7 +338,7 @@ function registerTools(server: McpServer) {
 		'bb_put',
 		{
 			title: 'Bitbucket PUT Request',
-			description: buildPutDescription(workspace),
+			description: buildPutDescription(workspace, project),
 			inputSchema: RequestWithBodyArgs,
 			annotations: {
 				readOnlyHint: false,
@@ -335,7 +354,7 @@ function registerTools(server: McpServer) {
 		'bb_patch',
 		{
 			title: 'Bitbucket PATCH Request',
-			description: buildPatchDescription(workspace),
+			description: buildPatchDescription(workspace, project),
 			inputSchema: RequestWithBodyArgs,
 			annotations: {
 				readOnlyHint: false,
@@ -351,7 +370,7 @@ function registerTools(server: McpServer) {
 		'bb_delete',
 		{
 			title: 'Bitbucket DELETE Request',
-			description: buildDeleteDescription(workspace),
+			description: buildDeleteDescription(workspace, project),
 			inputSchema: DeleteApiToolArgs,
 			annotations: {
 				readOnlyHint: false,

@@ -50,10 +50,13 @@ async function handleRepoClone(args: Record<string, unknown>) {
 }
 
 // Tool description
-function buildCloneDescription(workspace: string): string {
+function buildCloneDescription(workspace: string, project?: string): string {
+	const projectNote = project
+		? `\n**Configured project: \`${project}\`** — repos in this project: \`https://bitbucket.org/${workspace}/workspace/projects/${project}\``
+		: '';
 	return `Clone a Bitbucket repository to your local filesystem using SSH (preferred) or HTTPS.
 
-**Workspace: \`${workspace}\`** (from BITBUCKET_DEFAULT_WORKSPACE)
+**Workspace: \`${workspace}\`** (from BITBUCKET_DEFAULT_WORKSPACE)${projectNote}
 - Repo URL pattern: \`https://bitbucket.org/${workspace}/{repo}/\`
 
 Provide \`repoSlug\` (the {repo} part of the URL) and \`targetPath\` (absolute path). Clones into \`targetPath/repoSlug\`. SSH keys must be configured; falls back to HTTPS if unavailable.`;
@@ -75,12 +78,13 @@ function registerTools(server: McpServer) {
 	config.load();
 	const workspace =
 		config.get('BITBUCKET_DEFAULT_WORKSPACE') || '{workspace}';
+	const project = config.get('BITBUCKET_DEFAULT_PROJECT');
 
 	server.registerTool(
 		'bb_clone',
 		{
 			title: 'Clone Bitbucket Repository',
-			description: buildCloneDescription(workspace),
+			description: buildCloneDescription(workspace, project),
 			inputSchema: CloneRepositoryToolArgs,
 			annotations: {
 				readOnlyHint: false,
